@@ -21,24 +21,24 @@ DEBEZIUM_CONNECT_URL = os.getenv("DEBEZIUM_CONNECT_URL", "http://debezium:8083")
 TOPIC_PREFIX = os.getenv("TOPIC_PREFIX", "healthcare")
 
 # explanation: Các topic CDC tương ứng với 7 bảng.
-# KAFKA_TOPICS = [
-#     os.getenv("TOPIC_DOCTOR", "healthcare.public.doctor"),
-#     os.getenv("TOPIC_PATIENT", "healthcare.public.patient"),
-#     os.getenv("TOPIC_APPOINTMENT", "healthcare.public.appointment"),
-#     os.getenv("TOPIC_PAYMENT", "healthcare.public.payment"),
-#     os.getenv("TOPIC_CLINIC", "healthcare.public.clinic"),
-#     os.getenv("TOPIC_SLOT", "healthcare.public.slot"),
-#     os.getenv("TOPIC_MEDICAL_RECORD", "healthcare.public.medical_record"),
-# ]
+KAFKA_TOPICS = [
+    os.getenv("TOPIC_DOCTOR", "healthcare.public.doctor"),
+    os.getenv("TOPIC_PATIENT", "healthcare.public.patient"),
+    os.getenv("TOPIC_APPOINTMENT", "healthcare.public.appointment"),
+    os.getenv("TOPIC_PAYMENT", "healthcare.public.payment"),
+    os.getenv("TOPIC_CLINIC", "healthcare.public.clinic"),
+    os.getenv("TOPIC_SLOT", "healthcare.public.slot"),
+    os.getenv("TOPIC_MEDICAL_RECORD", "healthcare.public.medical_record"),
+]
 
-# KAFKA_TOPIC_DOCTOR = os.getenv("KAFKA_TOPIC_DOCTOR", "healthcare.public.doctor")
+KAFKA_TOPIC_DOCTOR = os.getenv("KAFKA_TOPIC_DOCTOR", "healthcare.public.doctor")
 
 # # explanation: Cấu hình ClickHouse data warehouse
-# CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
-# CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT", 8123))
-# CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB", "healthcare_dw")
-# CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
-# CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
+CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
+CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT", 8123))
+CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB", "healthcare_dw")
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
 
 ADMIN_DB_CONFIG = {
     "host": PG_HOST,

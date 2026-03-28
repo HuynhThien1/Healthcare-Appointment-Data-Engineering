@@ -95,6 +95,37 @@ services:
       - "8080:8080"
     environment:
       KAFKA_CONNECT_URIS: http://debezium:8083
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.1
+    container_name: clickhouse
+    hostname: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: heathcare_dw
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "default"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  spark:
+    build: .
+    container_name: spark
+    depends_on:
+      broker:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started\
+      env_file:
+        - .env
+      volumes:
+        - .:/app
+      working_dir: /app
+      command: tail -f /dev/null
+
   app:
     build: .
     container_name: healthcare_app
@@ -114,3 +145,4 @@ services:
     command: tail -f /dev/null
 volumes:
   postgres_data:
+  clickhouse_data:
