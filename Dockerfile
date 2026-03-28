@@ -9,9 +9,12 @@ WORKDIR /app
 # Cài package hệ thống cần thiết
 RUN apt-get update && apt-get install -y \
     gcc \
+    g++ \
+    default-jdk \
     libpq-dev \
     curl \
     netcat-openbsd \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy file requirements trước để tận dụng cache build
