@@ -1,8 +1,8 @@
 h1. Healthcare Appointment Data Engineering
 
-Below are the step-by-step instructions to run this repository.
+This document describes how to run, validate, and debug the project step by step.
 
-h2. Run the project
+h2. 1. Run the project
 
 h3. Step 1: Install dependencies
 
@@ -14,42 +14,37 @@ h3. Step 2: Start Docker containers
 
 <pre>
 docker compose up -d
+docker compose ps -a
 </pre>
 
+h3. Step 3: Verify ClickHouse connection
 
-Check clickhouse connection 
+<pre>
 docker exec -it clickhouse clickhouse-client --query "SELECT 1"
-init database schema on clickhouse
+</pre>
 
-h3. Step 3: Initialize database, create schema, seed data, and register connector
+h3. Step 4: Initialize PostgreSQL schema, seed data, and register Debezium connector
 
 <pre>
 python main.py
 </pre>
 
-h3. Step 4: Generate CDC events
+h3. Step 5: Generate CDC events
 
 <pre>
 python -m app.stream_generator
 </pre>
 
-h3. Step 5: Open another terminal and run the consumer
+h3. Step 6: Run CDC consumer in another terminal
 
 <pre>
 python healthcare_streaming_consumer.py
 </pre>
 
-h2. Debug steps
 
-h3. 1. Restart Docker containers
+h2. 2. Component validation
 
-<pre>
-docker compose down -v
-docker compose up -d --build
-docker compose ps -a
-</pre>
-
-h3. 2. Test config inside the app container
+h3. 2.1 Validate app config inside container
 
 <pre>
 docker compose exec app python -c "from app.config import *; print(PG_HOST, PG_PORT, PG_ADMIN_DB, PG_APP_DB, KAFKA_BOOTSTRAP_SERVERS, DEBEZIUM_CONNECT_URL)"
@@ -61,61 +56,67 @@ docker compose exec app python -c "from app.config import *; print(PG_HOST, PG_P
 postgres 5432 postgres healthcare_booking_realtime broker:29092 http://debezium:8083
 </pre>
 
-h3. 3. Create database
+h3. 2.2 Validate PostgreSQL database creation
+
+Create database:
 
 <pre>
 docker compose exec app python -c "from app.create_schema import create_database; create_database()"
 </pre>
 
-h3. 4. Check created databases in PostgreSQL
+Check created databases:
 
 <pre>
 docker compose exec postgres psql -U postgres -d postgres -c "\l"
 </pre>
 
-h3. 5. Test connection between app and PostgreSQL
+Test app connection to PostgreSQL:
 
 <pre>
 docker compose exec app python -c "from app.db import get_app_connection; conn=get_app_connection(); print('app db ok'); conn.close()"
 </pre>
 
-h3. 6. Create schema
+h3. 2.3 Validate PostgreSQL schema and seed data
+
+Create schema:
 
 <pre>
 docker compose exec app python -c "from app.create_schema import create_schema; create_schema()"
 </pre>
 
-h3. 7. Check created tables
+Check created tables:
 
 <pre>
 docker compose exec postgres psql -U postgres -d healthcare_booking_realtime -c "\dt"
 </pre>
 
-h3. 8. Seed data
+Seed master data:
 
 <pre>
 docker compose exec app python -c "from app.seed_master_data import seed_all; seed_all()"
 </pre>
 
-h3. 9. Check seeded data
+Check seeded data:
 
 <pre>
 docker compose exec app python -c "from app.db import fetch_all; print(fetch_all('SELECT * FROM doctor LIMIT 5;'))"
 </pre>
 
-h3. 10. Wait for Debezium to start
+h3. 2.4 Validate Debezium connector
+
+Wait for Debezium service:
 
 <pre>
 docker compose exec app python -c "from app.register_connector import wait_for_debezium; wait_for_debezium()"
 </pre>
 
-h3. 11. Register Debezium connector
+Register connector:
 
 <pre>
 docker compose exec app python -c "from app.register_connector import register_connector; register_connector()"
 </pre>
 
-h3. 12. Check connector list from host machine
+Check connector list:
 
 <pre>
 curl http://localhost:8093/connectors
@@ -127,38 +128,148 @@ curl http://localhost:8093/connectors
 ["healthcare-postgres-connector"]
 </pre>
 
-h3. 13. Check connector status
+Check connector status:
 
 <pre>
 curl http://localhost:8093/connectors/healthcare-postgres-connector/status
 </pre>
 
-h3. 14. Check whether Kafka topics were created
+Check connector config:
 
 <pre>
-docker compose exec broker bash
-kafka-topics --bootstrap-server broker:29092 --list
-</pre>
-
-h3. 15. Check connector status and config
-
-<pre>
-curl http://localhost:8093/connectors/healthcare-postgres-connector/status
 curl http://localhost:8093/connectors/healthcare-postgres-connector/config
 </pre>
 
-h3. 16. Consume CDC events from Kafka
-
-Run this command first:
+h3. 2.5 Validate Kafka topics
 
 <pre>
-kafka-console-consumer --bootstrap-server broker:29092 --topic healthcare.public.doctor --from-beginning
+docker compose exec broker bash -lc "kafka-topics --bootstrap-server broker:29092 --list"
 </pre>
 
-Then open a new terminal and update data in PostgreSQL:
+Expected CDC topics should appear after the connector captures table changes, for example:
+
+<pre>
+healthcare.public.doctor
+</pre>
+
+h3. 2.6 Validate ClickHouse warehouse
+
+Initialize ClickHouse warehouse:
+
+<pre>
+docker compose exec app python -c "from app.init_clickhouse import init_clickhouse; init_clickhouse()"
+</pre>
+
+Check ClickHouse objects:
+
+<pre>
+docker compose exec clickhouse clickhouse-client --query "SHOW DATABASES"
+docker compose exec clickhouse clickhouse-client --query "SHOW TABLES FROM healthcare_dw"
+docker compose exec clickhouse clickhouse-client --query "DESCRIBE TABLE healthcare_dw.dim_doctor"
+</pre>
+
+
+h2. 3. Spark streaming job
+
+h3. Step 1: Remove old checkpoint
+
+<pre>
+docker compose exec spark-master sh -lc 'rm -rf /tmp/checkpoints/stream_doctor_to_dw'
+</pre>
+
+h3. Step 2: Submit Spark job
+
+<pre>
+docker compose exec spark-master sh -lc '
+mkdir -p /tmp/pylibs /opt/spark/work-dir/.ivy2 && \
+pip install --target=/tmp/pylibs python-dotenv && \
+PYTHONPATH=/tmp/pylibs:/app \
+/opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --conf spark.jars.ivy=/opt/spark/work-dir/.ivy2 \
+  --conf spark.executorEnv.PYTHONPATH=/tmp/pylibs:/app \
+  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,com.clickhouse:clickhouse-jdbc:0.6.0 \
+  /app/spark_jobs/stream_doctor_to_dw.py
+'
+</pre>
+
+
+h2. 4. End-to-end CDC test
+
+h3. 4.1 Consume CDC events from Kafka
+
+Run consumer command:
+
+<pre>
+docker compose exec broker bash -lc "kafka-console-consumer --bootstrap-server broker:29092 --topic healthcare.public.doctor --from-beginning"
+</pre>
+
+h3. 4.2 Update existing PostgreSQL data
+
+In another terminal:
 
 <pre>
 docker compose exec app python -c "from app.db import execute_query; execute_query(\"UPDATE doctor SET doctor_name='Nguyen Van B', updated_at=NOW() WHERE doctor_id=1001;\"); print('updated doctor')"
 </pre>
 
-Check the broker terminal to see the new CDC event.
+Expected result:
+* New CDC event appears in Kafka consumer
+* Debezium connector remains in RUNNING state
+
+h3. 4.3 Insert new PostgreSQL data
+
+In another terminal:
+
+<pre>
+docker compose exec app python -c "from app.db import execute_query; execute_query(\"INSERT INTO doctor (doctor_id, doctor_code, doctor_name, specialty, employment_status, created_at, updated_at) VALUES (2003, 'DOC2003', 'Le Van C', 'Neurology', 'ACTIVE', NOW(), NOW());\"); print('inserted doctor')"
+</pre>
+
+Expected result:
+* New CDC event appears in Kafka
+* Spark job reads the event
+* New row is written into ClickHouse table
+
+h3. 4.4 Verify ClickHouse output
+
+<pre>
+docker compose exec clickhouse clickhouse-client --query "SELECT * FROM healthcare_dw.dim_doctor ORDER BY doctor_id"
+</pre>
+
+
+h2. 5. Full reset / debug flow
+
+Use this flow when the system is broken and needs a clean restart.
+
+h3. Step 1: Restart all containers
+
+<pre>
+docker compose down -v
+docker compose up -d --build
+docker compose ps -a
+</pre>
+
+h3. Step 2: Re-run validation sequence
+
+# 1. Check app config
+# 2. Create database
+# 3. Create schema
+# 4. Seed data
+# 5. Wait for Debezium
+# 6. Register connector
+# 7. Check Kafka topics
+# 8. Initialize ClickHouse
+# 9. Start Spark job
+# 10. Run insert / update test
+
+h2. 6. Success criteria
+
+The setup is considered successful when:
+
+* PostgreSQL database and tables are created successfully
+* Seed data is inserted successfully
+* Debezium connector is registered and status is RUNNING
+* Kafka CDC topics are created
+* CDC events can be consumed from Kafka
+* ClickHouse warehouse and tables are created
+* Spark job runs without error
+* New PostgreSQL inserts/updates are reflected in ClickHouse
