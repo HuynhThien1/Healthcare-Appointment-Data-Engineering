@@ -5,3 +5,4 @@ requests==2.31.0
 kafka-python==2.0.2
 pyspark==3.5.1
 clickhouse-connect
+clickhouse-driver

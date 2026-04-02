@@ -31,32 +31,90 @@ def wait_for_debezium(timeout_seconds: int = 120):
 
     raise TimeoutError("Debezium did not become ready in time.")
 
-
-def register_connector():
-    # explanation: Tạo connector nếu nó chưa tồn tại.
+def load_connector_payload():
+    # explanation:
+    # Debezium create connector API thường nhận payload dạng:
+    # {
+    #   "name": "...",
+    #   "config": {...}
+    # }
     payload = json.loads(CONNECTOR_CONFIG_PATH.read_text(encoding="utf-8"))
+    return payload
 
-    existing = requests.get(
-        f"{DEBEZIUM_CONNECT_URL}/connectors/{CONNECTOR_NAME}",
-        timeout=10,
-    )
 
-    if existing.status_code == 200:
-        print(f"Connector already exists: {CONNECTOR_NAME}")
-        return
+def connector_exists() -> bool:
+    try:
+        resp = requests.get(
+            f"{DEBEZIUM_CONNECT_URL}/connectors/{CONNECTOR_NAME}",
+            timeout=10,
+        )
+        return resp.status_code == 200
+    except requests.RequestException as e:
+        raise RuntimeError(f"Failed to check connector existence: {e}") from e
 
-    resp = requests.post(
-        f"{DEBEZIUM_CONNECT_URL}/connectors",
-        json=payload,
-        timeout=20,
-    )
+
+def create_connector(payload: dict):
+    try:
+        resp = requests.post(
+            f"{DEBEZIUM_CONNECT_URL}/connectors",
+            json=payload,
+            timeout=20,
+        )
+    except requests.RequestException as e:
+        raise RuntimeError(f"Failed to create connector: {e}") from e
 
     if resp.status_code in (200, 201):
-        print(f"Connector created: {CONNECTOR_NAME}")
+        print(f"Connector created successfully: {CONNECTOR_NAME}")
     else:
-        print(f"Create connector failed: {resp.status_code} - {resp.text}")
+        raise RuntimeError(
+            f"Create connector failed: {resp.status_code} - {resp.text}"
+        )
+
+
+def update_connector(payload: dict):
+    # explanation:
+    # Update connector dùng endpoint:
+    # PUT /connectors/{name}/config
+    # và chỉ truyền phần config, không truyền cả object name+config.
+    config = payload["config"]
+
+    try:
+        resp = requests.put(
+            f"{DEBEZIUM_CONNECT_URL}/connectors/{CONNECTOR_NAME}/config",
+            json=config,
+            timeout=20,
+        )
+    except requests.RequestException as e:
+        raise RuntimeError(f"Failed to update connector: {e}") from e
+
+    if resp.status_code in (200, 201):
+        print(f"Connector updated successfully: {CONNECTOR_NAME}")
+    else:
+        raise RuntimeError(
+            f"Update connector failed: {resp.status_code} - {resp.text}"
+        )
+
+
+def register_connector(update_if_exists: bool = False):
+    # explanation:
+    # - Nếu connector chưa có -> create
+    # - Nếu đã có:
+    #     + update_if_exists=False -> bỏ qua
+    #     + update_if_exists=True  -> update config
+    wait_for_debezium()
+
+    payload = load_connector_payload()
+
+    if connector_exists():
+        if update_if_exists:
+            print(f"Connector already exists. Updating: {CONNECTOR_NAME}")
+            update_connector(payload)
+        else:
+            print(f"Connector already exists: {CONNECTOR_NAME}")
+        return
+
+    create_connector(payload)
 
 
 if __name__ == "__main__":
-    wait_for_debezium()
-    register_connector()
+    register_connector(update_if_exists=False)
