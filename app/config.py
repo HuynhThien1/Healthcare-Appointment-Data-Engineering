@@ -25,14 +25,14 @@ TOPIC_PREFIX = os.getenv("TOPIC_PREFIX", "healthcare")
 KAFKA_TOPICS = [
     os.getenv("TOPIC_DOCTOR", "healthcare.public.doctor"),
     os.getenv("TOPIC_PATIENT", "healthcare.public.patient"),
+    os.getenv("TOPIC_DOCTOR_SLOT", "healthcare.public.doctor_slot"),
     os.getenv("TOPIC_APPOINTMENT", "healthcare.public.appointment"),
+    os.getenv("TOPIC_APPOINTMENT_STATUS_HISTORY", "healthcare.public.appointment_status_history"),
     os.getenv("TOPIC_PAYMENT", "healthcare.public.payment"),
-    os.getenv("TOPIC_CLINIC", "healthcare.public.clinic"),
-    os.getenv("TOPIC_SLOT", "healthcare.public.slot"),
     os.getenv("TOPIC_MEDICAL_RECORD", "healthcare.public.medical_record"),
 ]
 
-KAFKA_TOPIC_DOCTOR = os.getenv("KAFKA_TOPIC_DOCTOR", "healthcare.public.doctor")
+# KAFKA_TOPIC_DOCTOR = os.getenv("KAFKA_TOPIC_DOCTOR", "healthcare.public.doctor")
 
 # # explanation: Cấu hình ClickHouse data warehouse
 CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
