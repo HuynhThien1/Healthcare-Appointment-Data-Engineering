@@ -16,6 +16,11 @@ h3. Step 2: Start Docker containers
 docker compose up -d
 </pre>
 
+
+Check clickhouse connection 
+docker exec -it clickhouse clickhouse-client --query "SELECT 1"
+init database schema on clickhouse
+
 h3. Step 3: Initialize database, create schema, seed data, and register connector
 
 <pre>

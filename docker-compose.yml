@@ -13,6 +13,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - healthcare-net
 
   broker:
     image: confluentinc/cp-kafka:7.4.0
@@ -39,6 +41,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - healthcare-net
 
   postgres:
     image: postgres:15
@@ -56,6 +60,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - healthcare-net
 
   debezium:
     image: debezium/connect:2.5
@@ -83,6 +91,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - healthcare-net
 
   debezium-ui:
     image: debezium/debezium-ui:2.5
@@ -92,9 +102,11 @@ services:
       debezium:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8088:8080"
     environment:
       KAFKA_CONNECT_URIS: http://debezium:8083
+    networks:
+      - healthcare-net
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.1
@@ -104,28 +116,62 @@ services:
       - "8123:8123"
       - "9000:9000"
     environment:
-      CLICKHOUSE_DB: heathcare_dw
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: "default"
+      CLICKHOUSE_DB: healthcare_dw
+      CLICKHOUSE_USER: app_user
+      CLICKHOUSE_PASSWORD: "clickhousepassword"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
-      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - healthcare-net
 
-  spark:
-    build: .
-    container_name: spark
+  spark-master:
+    image: apache/spark:3.5.1
+    container_name: spark-master
+    hostname: spark-master
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.master.Master
+      --host spark-master
+      --port 7077
+      --webui-port 8080
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    environment:
+      SPARK_LOCAL_IP: spark-master
+      SPARK_SUBMIT_OPTS: "-Divy.cache.dir=/tmp/.ivy2 -Divy.home=/tmp/.ivy2"
+    volumes:
+      - ./:/app
+      - spark_ivy_cache:/tmp/.ivy2
+    networks:
+      - healthcare-net
+
+  spark-worker:
+    image: apache/spark:3.5.1
+    container_name: spark-worker
+    hostname: spark-worker
     depends_on:
-      broker:
-        condition: service_healthy
-      clickhouse:
-        condition: service_started\
-      env_file:
-        - .env
-      volumes:
-        - .:/app
-      working_dir: /app
-      command: tail -f /dev/null
-
+      - spark-master
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.worker.Worker
+      spark://spark-master:7077
+    ports:
+      - "8081:8081"
+    environment:
+      SPARK_WORKER_WEBUI_PORT: 8081
+      SPARK_LOCAL_IP: spark-worker
+      SPARK_SUBMIT_OPTS: "-Divy.cache.dir=/tmp/.ivy2 -Divy.home=/tmp/.ivy2"
+    volumes:
+      - ./:/app
+      - spark_ivy_cache:/tmp/.ivy2
+    networks:
+      - healthcare-net
   app:
     build: .
     container_name: healthcare_app
@@ -137,12 +183,21 @@ services:
         condition: service_healthy
       debezium:
         condition: service_healthy
+      clickhouse:
+        condition: service_healthy
     env_file:
       - .env
     volumes:
       - .:/app
     working_dir: /app
     command: tail -f /dev/null
+    networks:
+      - healthcare-net
+networks:
+  healthcare-net:
+    driver: bridge
+
 volumes:
   postgres_data:
   clickhouse_data:
+  spark_ivy_cache:

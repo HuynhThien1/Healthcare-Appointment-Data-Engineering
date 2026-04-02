@@ -3,12 +3,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+#PostgresSQL 
 PG_HOST = os.getenv("PG_HOST", "localhost")
 PG_PORT = int(os.getenv("PG_PORT", 5432))
 PG_ADMIN_DB = os.getenv("PG_ADMIN_DB", "postgres")
 PG_APP_DB = os.getenv("PG_APP_DB", "healthcare_booking_realtime")
 PG_USER = os.getenv("PG_USER", "postgres")
-PG_PASSWORD = os.getenv("PG_PASSWORD", "")
+PG_PASSWORD = os.getenv("PG_PASSWORD", "postgres")
 
 # explanation: Kafka bootstrap server để consumer đọc event.
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "broker:29092")
@@ -35,10 +36,12 @@ KAFKA_TOPIC_DOCTOR = os.getenv("KAFKA_TOPIC_DOCTOR", "healthcare.public.doctor")
 
 # # explanation: Cấu hình ClickHouse data warehouse
 CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
-CLICKHOUSE_PORT = int(os.getenv("CLICKHOUSE_PORT", 8123))
+CLICKHOUSE_HTTP_PORT = int(os.getenv("CLICKHOUSE_HTTP_PORT", 8123))
 CLICKHOUSE_DB = os.getenv("CLICKHOUSE_DB", "healthcare_dw")
-CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
-CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "app_user")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "clickhousepassword")
+CLICKHOUSE_NATIVE_PORT = int(os.getenv("CLICKHOUSE_NATIVE_PORT", 9000))
+
 
 ADMIN_DB_CONFIG = {
     "host": PG_HOST,
