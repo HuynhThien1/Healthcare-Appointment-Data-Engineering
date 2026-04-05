@@ -9,7 +9,7 @@ PG_PORT = int(os.getenv("PG_PORT", 5432))
 PG_ADMIN_DB = os.getenv("PG_ADMIN_DB", "postgres")
 PG_APP_DB = os.getenv("PG_APP_DB", "healthcare_booking_realtime")
 PG_USER = os.getenv("PG_USER", "postgres")
-PG_PASSWORD = os.getenv("PG_PASSWORD", "postgres")
+PG_PASSWORD = os.getenv("PG_PASSWORD", "Thien280503@")
 
 # explanation: Kafka bootstrap server để consumer đọc event.
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "broker:29092")

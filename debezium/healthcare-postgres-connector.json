@@ -11,7 +11,7 @@
     "topic.prefix": "healthcare",
     "slot.name": "healthcare_debezium_slot",
     "publication.autocreate.mode": "filtered",
-    "table.include.list": "public.doctor,public.patient,public.doctor_slot,public.appointment,public.appointment_status_history,public.payment,public.medical_record",
+    "table.include.list": "public.doctor,public.patient, public.slot_code_template,public.doctor_slot,public.appointment,public.appointment_transaction,public.medical_record",
     "tombstones.on.delete": "false"
   }
 }
