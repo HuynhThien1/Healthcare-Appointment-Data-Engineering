@@ -1,16 +1,5 @@
 CREATE VIEW IF NOT EXISTS {db}.vw_fact_appointment_current AS
-SELECT
-    appointment_id,
-    booking_ref,
-    slot_id,
-    doctor_id,
-    patient_id,
-    slot_date,
-    slot_code,
-    booked_at,
-    appointment_count,
-    is_deleted,
-    latest_dw_updated_at
+SELECT *
 FROM (
     SELECT
         appointment_id,
@@ -31,19 +20,7 @@ WHERE is_deleted = 0;
 
 
 CREATE VIEW IF NOT EXISTS {db}.vw_fact_slot_daily_current AS
-SELECT
-    slot_id,
-    doctor_id,
-    slot_date,
-    slot_code,
-    slot_status,
-    slot_count,
-    is_available,
-    is_booked,
-    is_blocked,
-    is_cancelled,
-    is_deleted,
-    latest_dw_updated_at
+SELECT *
 FROM (
     SELECT
         slot_id,
@@ -65,19 +42,7 @@ WHERE is_deleted = 0;
 
 
 CREATE VIEW IF NOT EXISTS {db}.vw_fact_medical_record_current AS
-SELECT
-    record_id,
-    slot_id,
-    doctor_id,
-    patient_id,
-    slot_date,
-    slot_code,
-    version_number,
-    diagnosis_note,
-    prescription_note,
-    record_count,
-    is_deleted,
-    latest_dw_updated_at
+SELECT *
 FROM (
     SELECT
         record_id,
