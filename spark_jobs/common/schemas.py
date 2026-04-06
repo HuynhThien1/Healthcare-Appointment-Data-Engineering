@@ -1,13 +1,14 @@
 from pyspark.sql.types import LongType, StringType, StructField, StructType
 
 
+#The function creates the overall schema for Debezium message
 def debezium_envelope(after_schema: StructType) -> StructType:
     payload_schema = StructType(
         [
-            StructField("before", after_schema, True),
-            StructField("after", after_schema, True),
-            StructField("op", StringType(), True),
-            StructField("ts_ms", LongType(), True),
+            StructField("before", after_schema, True), #Data before update
+            StructField("after", after_schema, True), #Data after update
+            StructField("op", StringType(), True), #Update code like c, y, d, r
+            StructField("ts_ms", LongType(), True), #timestamp do Debezium gắn vào event
         ]
     )
 
