@@ -128,6 +128,17 @@ services:
       retries: 10
     networks:
       - healthcare-net
+  tabix:
+    image: spoonest/clickhouse-tabix-web-client:latest
+    container_name: tabix
+    hostname: tabix
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - "8089:80"
+    networks:
+      - healthcare-net
 
   spark-master:
     image: apache/spark:3.5.1

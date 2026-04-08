@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS {db}.stg_patient (
     address String,
     phone_number String,
     insurance_number String,
-    date_of_birth Nullable(Date),
+    date_of_birth Nullable(Date32),
     gender String,
     email String,
     created_at Nullable(DateTime),
