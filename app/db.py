@@ -31,5 +31,22 @@ def execute_query(query: str, params=None, fetch: bool = False):
 
 
 def fetch_all(query: str, params=None):
-    # explanation: Shortcut để lấy toàn bộ rows dưới dạng dict.
+
     return execute_query(query, params=params, fetch=True)
+
+def fetch_one(query: str, params=None):
+    conn = get_app_connection()  
+
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query, params or ())
+            result = cur.fetchone()
+
+            conn.commit()   
+
+            return result
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()

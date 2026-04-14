@@ -1,0 +1,18 @@
+python -m main // load schema, db và chạy seed data
+
+python -m uvicorn api:app --reload để chạy API
+
+vào localhost:8000/docs để xem API documentation ở dạng swagger UI
+
+Vào front-end thì đầu tiên là từ vị trí hiện tại
+
+chạy cd healthcare-fe
+
+sau đó dùng npm run dev để chạy front-end //mình có thắc mắc nếu người khác muốn dùng thì trước npm run dev có cần chạy gì trước k
+
+không nhỉ, ví dụ như cài đặt node_modules hay gì đó không? Nếu có thì mình sẽ thêm vào hướng dẫn luôn
+
+sau đó vào localhost:3000, có 2 nút là login và register
+
+login để đăng nhập với tài khoản đã có, còn register để tạo tài khoản mới
+
