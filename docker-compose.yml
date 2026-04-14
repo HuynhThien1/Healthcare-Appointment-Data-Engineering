@@ -183,27 +183,64 @@ services:
       - spark_ivy_cache:/tmp/.ivy2
     networks:
       - healthcare-net
-  app:
-    build: .
-    container_name: healthcare_app
-    hostname: app
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: backend
+    hostname: backend
     depends_on:
-      postgres:
-        condition: service_healthy
-      broker:
-        condition: service_healthy
-      debezium:
-        condition: service_healthy
-      clickhouse:
-        condition: service_healthy
-    env_file:
-      - .env
+      - postgres
+      - broker
+      - debezium
+      - clickhouse
+    ports:
+      - "8000:8000"
+    environment:
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_USER: postgres
+      PG_PASSWORD: postgres
+      PG_APP_DB: healthcare_booking_realtime
+
+      KAFKA_BOOTSTRAP_SERVERS: broker:29092
+      DEBEZIUM_CONNECT_URL: http://debezium:8083
+
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_HTTP_PORT: 8123
+      CLICKHOUSE_NATIVE_PORT: 9000
+      CLICKHOUSE_DB: healthcare_dw
+      CLICKHOUSE_USER: app_user
+      CLICKHOUSE_PASSWORD: "clickhousepassword"
+
+      SPARK_MASTER_URL: spark://spark-master:7077
     volumes:
       - .:/app
-    working_dir: /app
-    command: tail -f /dev/null
+    command: python -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
     networks:
       - healthcare-net
+
+  frontend:
+    build:
+      context: ./healthcare-fe
+      dockerfile: Dockerfile.frontend
+    container_name: frontend
+    hostname: frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./healthcare-fe:/frontend
+      - /frontend/node_modules
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    command: npm run dev -- --hostname 0.0.0.0
+    restart: unless-stopped
+    networks:
+      - healthcare-net
+
 networks:
   healthcare-net:
     driver: bridge
