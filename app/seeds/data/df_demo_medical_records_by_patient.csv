@@ -1,0 +1,20 @@
+recordID,version,patientID,patientName,specialty,doctorID,doctorName,diagnosis,treatment,updated_at
+REC2600001991,1,001283,Vương Ngọc Diệu,Da liễu,DR025,Trần Ngọc Thảo,Mụn trứng cá mức độ trung bình,"Gel bôi kháng khuẩn, sữa rửa mặt dịu nhẹ, hạn chế đồ cay.",2026-01-03 10:55
+REC2600001991,2,001283,Vương Ngọc Diệu,Da liễu,DR025,Trần Ngọc Thảo,Mụn trứng cá mức độ trung bình (Cập nhật),"Gel bôi kháng khuẩn, sữa rửa mặt dịu nhẹ, hạn chế đồ cay. - Theo dõi diễn tiến.",2026-01-03 12:55
+REC2600001991,3,001283,Vương Ngọc Diệu,Da liễu,DR025,Trần Ngọc Thảo,Mụn trứng cá mức độ trung bình (Kết luận cuối),"Gel bôi kháng khuẩn, sữa rửa mặt dịu nhẹ, hạn chế đồ cay. - Tái khám sau 1 tuần.",2026-01-03 17:55
+REC2600004647,1,001283,Vương Ngọc Diệu,Da liễu,DR033,Đặng Quỳnh Thảo,Viêm da cơ địa,"Dưỡng ẩm chuyên sâu, thuốc bôi corticosteroid liều nhẹ.",2026-01-07 17:01
+REC2600004647,2,001283,Vương Ngọc Diệu,Da liễu,DR033,Đặng Quỳnh Thảo,Viêm da cơ địa (Cập nhật),"Dưỡng ẩm chuyên sâu, thuốc bôi corticosteroid liều nhẹ. - Theo dõi diễn tiến.",2026-01-07 20:01
+REC2600017726,1,001283,Vương Ngọc Diệu,Tim mạch,DR036,Nguyễn Ngọc Diệp,Rối loạn nhịp tim,"Thuốc điều hòa nhịp, tránh chất kích thích (cafein, rượu).",2026-01-24 13:29
+REC2600017726,2,001283,Vương Ngọc Diệu,Tim mạch,DR036,Nguyễn Ngọc Diệp,Rối loạn nhịp tim (Cập nhật),"Thuốc điều hòa nhịp, tránh chất kích thích (cafein, rượu). - Theo dõi diễn tiến.",2026-01-24 15:29
+REC2600017726,3,001283,Vương Ngọc Diệu,Tim mạch,DR036,Nguyễn Ngọc Diệp,Rối loạn nhịp tim (Kết luận cuối),"Thuốc điều hòa nhịp, tránh chất kích thích (cafein, rượu). - Tái khám sau 1 tuần.",2026-01-25 01:29
+REC2600051289,1,001283,Vương Ngọc Diệu,Nội tiết,DR056,Hoàng Văn Long,Rối loạn mỡ máu (Dyslipidemia),"Thuốc nhóm Statin, kiểm soát cân nặng.",2026-03-10 11:23
+REC2600051289,2,001283,Vương Ngọc Diệu,Nội tiết,DR056,Hoàng Văn Long,Rối loạn mỡ máu (Dyslipidemia) (Cập nhật),"Thuốc nhóm Statin, kiểm soát cân nặng. - Theo dõi diễn tiến.",2026-03-10 12:23
+REC2600052815,1,001283,Vương Ngọc Diệu,Da liễu,DR026,Đặng Anh Khoa,Nấm da tay chân,"Thuốc bôi kháng nấm, giữ vùng da khô thoáng.",2026-03-12 21:50
+REC2600052815,2,001283,Vương Ngọc Diệu,Da liễu,DR026,Đặng Anh Khoa,Nấm da tay chân (Cập nhật),"Thuốc bôi kháng nấm, giữ vùng da khô thoáng. - Theo dõi diễn tiến.",2026-03-12 23:50
+REC2600059097,1,001283,Vương Ngọc Diệu,Tim mạch,DR040,Nguyễn Quỳnh Trúc,Rối loạn nhịp tim,"Thuốc điều hòa nhịp, tránh chất kích thích (cafein, rượu).",2026-03-20 08:35
+REC2600059097,2,001283,Vương Ngọc Diệu,Tim mạch,DR040,Nguyễn Quỳnh Trúc,Rối loạn nhịp tim (Cập nhật),"Thuốc điều hòa nhịp, tránh chất kích thích (cafein, rượu). - Theo dõi diễn tiến.",2026-03-20 10:35
+REC2600063676,1,001283,Vương Ngọc Diệu,Mắt,DR066,Đặng Minh Bách,Khô mắt mãn tính,Sử dụng nước mắt nhân tạo thường xuyên.,2026-03-26 14:03
+REC2600063676,2,001283,Vương Ngọc Diệu,Mắt,DR066,Đặng Minh Bách,Khô mắt mãn tính (Cập nhật),Sử dụng nước mắt nhân tạo thường xuyên. - Theo dõi diễn tiến.,2026-03-26 17:03
+REC2600064604,1,001283,Vương Ngọc Diệu,Hô hấp,DR071,Nguyễn Đức Khoa,Hen phế quản,Thuốc xịt cắt cơn và thuốc kiểm soát dự phòng hằng ngày.,2026-03-27 17:08
+REC2600064604,2,001283,Vương Ngọc Diệu,Hô hấp,DR071,Nguyễn Đức Khoa,Hen phế quản (Cập nhật),Thuốc xịt cắt cơn và thuốc kiểm soát dự phòng hằng ngày. - Theo dõi diễn tiến.,2026-03-27 19:08
+REC2600064604,3,001283,Vương Ngọc Diệu,Hô hấp,DR071,Nguyễn Đức Khoa,Hen phế quản (Kết luận cuối),Thuốc xịt cắt cơn và thuốc kiểm soát dự phòng hằng ngày. - Tái khám sau 1 tuần.,2026-03-28 00:08

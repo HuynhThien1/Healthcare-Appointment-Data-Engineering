@@ -1,0 +1,1 @@
+export const INSURANCE_PREFIX = ["GD", "DN", "CH", "QN"];

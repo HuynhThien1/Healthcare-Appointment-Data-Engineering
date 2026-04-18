@@ -3,12 +3,6 @@
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type Doctor = {
-  doctor_id: number;
-  doctor_name: string;
-  specialty: string;
-};
-
 export default function DoctorLayout({
   children,
 }: {
@@ -17,61 +11,31 @@ export default function DoctorLayout({
   const router = useRouter();
   const pathname = usePathname();
 
-  const [mounted, setMounted] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [doctor, setDoctor] = useState<Doctor | null>(null);
-  const [loadingDoctor, setLoadingDoctor] = useState(true);
-
-  // 🔐 Effect 1: Auth + lấy userId
-  useEffect(() => {
-    setMounted(true);
+  // ✅ init state từ localStorage (không cần setState trong effect)
+  const [userId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
 
     const role = localStorage.getItem("role");
     const id = localStorage.getItem("user_id");
 
     if (!role || !id || role !== "doctor") {
-      router.replace("/auth/login");
-      return;
+      return null;
     }
 
-    setUserId(id);
-  }, [router]);
+    return id;
+  });
 
-  // 📡 Effect 2: fetch doctor (🔥 đúng dependency)
+  // ✅ chỉ dùng effect để redirect (side-effect đúng nghĩa)
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      router.replace("/auth/login");
+    }
+  }, [userId, router]);
 
-    const fetchDoctor = async () => {
-      try {
-        const res = await fetch(
-          `http://127.0.0.1:8000/doctors/${userId}`, // ⚠️ nhớ đúng endpoint
-        );
-
-        if (!res.ok) {
-          console.error("Doctor fetch failed:", res.status);
-          return;
-        }
-
-        const data: Doctor = await res.json();
-        console.log("Doctor data:", data);
-
-        setDoctor(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingDoctor(false);
-      }
-    };
-
-    fetchDoctor();
-  }, [userId]);
-
-  // 🔒 tránh hydration mismatch
-  if (!mounted || !userId) return null;
+  if (!userId) return null;
 
   return (
     <div className="space-y-4">
-      {/* Tabs */}
       <div className="flex gap-2">
         <button
           onClick={() => router.push("/dashboard/doctor/slots")}
@@ -90,9 +54,29 @@ export default function DoctorLayout({
         >
           Booking History
         </button>
+
+        <button
+          onClick={() => router.push("/dashboard/doctor/generate")}
+          className={`px-4 py-1 rounded ${
+            pathname.includes("generate")
+              ? "bg-black text-white"
+              : "bg-gray-200"
+          }`}
+        >
+          Generate Schedule
+        </button>
+        <button
+          onClick={() => router.push("/dashboard/doctor/medical-record")}
+          className={`px-4 py-1 rounded ${
+            pathname.includes("medical-record")
+              ? "bg-black text-white"
+              : "bg-gray-200"
+          }`}
+        >
+          Medical Records
+        </button>
       </div>
 
-      {/* 🔥 QUAN TRỌNG */}
       <div>{children}</div>
     </div>
   );

@@ -10,3 +10,4 @@ fastapi
 uvicorn
 pydantic
 pandas
+APScheduler==3.10.4

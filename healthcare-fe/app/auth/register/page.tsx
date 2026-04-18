@@ -1,58 +1,119 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SPECIALTIES, type Specialty } from "@/app/constants/specialties";
+
+import { INSURANCE_PREFIX } from "@/app/constants/insurances";
 
 export default function RegisterPage() {
-  const [role, setRole] = useState<"doctor" | "patient">("patient");
+  const router = useRouter();
 
   const [name, setName] = useState("");
-
-  // doctor
-  const [specialty, setSpecialty] = useState<Specialty>(SPECIALTIES[0]);
-
-  // patient
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
-  const [insurance, setInsurance] = useState("");
+
+  // insurance split
+  const [insurancePrefix, setInsurancePrefix] = useState("GD");
+  const [insuranceNumber, setInsuranceNumber] = useState("");
+
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("");
-  const router = useRouter();
 
-  const handleRegister = async () => {
-    let payload;
+  const [existingInsurance, setExistingInsurance] = useState<string[]>([]);
 
-    if (role === "doctor") {
-      payload = {
-        doctor_name: name,
-        specialty,
-        start_working_date: new Date().toISOString().split("T")[0],
-      };
-    } else {
-      payload = {
-        patient_name: name,
-        phone_number: phone,
-        address,
-        email,
-        insurance_number: insurance,
-        date_of_birth: dob,
-        gender,
-      };
+  // 🔥 fetch existing insurance
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/patients/insurance-numbers/all")
+      .then((res) => res.json())
+      .then((data) => {
+        type InsuranceItem = {
+          insurance_number: string;
+        };
+
+        let list: string[] = [];
+
+        if (Array.isArray(data)) {
+          list = data.map((i: InsuranceItem) => i.insurance_number);
+        } else if (Array.isArray(data.data)) {
+          list = data.data.map((i: InsuranceItem) => i.insurance_number);
+        } else {
+          console.error("Unexpected API format:", data);
+        }
+
+        setExistingInsurance(list);
+        setExistingInsurance(list);
+      })
+      .catch(console.error);
+  }, []);
+
+  const validate = () => {
+    // phone
+    if (!/^0\d{9}$/.test(phone)) {
+      alert("Phone must be 10 digits and start with 0");
+      return false;
     }
 
+    // email
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      alert("Invalid email");
+      return false;
+    }
+
+    // insurance 13 digits
+    if (!/^\d{13}$/.test(insuranceNumber)) {
+      alert("Insurance number must be 13 digits");
+      return false;
+    }
+
+    const fullInsurance = insurancePrefix + insuranceNumber;
+
+    if (existingInsurance.includes(fullInsurance)) {
+      alert("Insurance already exists");
+      return false;
+    }
+
+    // gender
+    if (!["male", "female"].includes(gender)) {
+      alert("Gender must be male or female");
+      return false;
+    }
+
+    // dob
+    const year = new Date(dob).getFullYear();
+    const currentYear = new Date().getFullYear();
+
+    if (year > currentYear - 10) {
+      alert(`DOB must be before ${currentYear - 10}`);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleRegister = async () => {
+    if (!validate()) return;
+
+    const fullInsurance = insurancePrefix + insuranceNumber;
+
+    const payload = {
+      patient_name: name,
+      phone_number: phone,
+      address,
+      email,
+      insurance_number: fullInsurance,
+      date_of_birth: dob,
+      gender,
+    };
+
     try {
-      const res = await fetch(
-        `http://127.0.0.1:8000/${role === "doctor" ? "doctors" : "patients"}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
+      const res = await fetch("http://127.0.0.1:8000/patients", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify(payload),
+      });
 
       const data = await res.json();
 
@@ -60,24 +121,12 @@ export default function RegisterPage() {
         alert(data.message || "Register failed");
         return;
       }
+      alert(`Registered successfully with insurance ${fullInsurance}`);
+      localStorage.setItem("user_insurance", fullInsurance);
+      localStorage.setItem("user_id", String(data.patient_id));
+      localStorage.setItem("role", "patient");
 
-      // ✅ LƯU LOGIN INFO
-      // ⚠️ giả sử backend trả id như:
-      // doctor_id hoặc patient_id
-      const userId =
-        role === "doctor"
-          ? data.doctor_id || data.id
-          : data.patient_id || data.id;
-
-      localStorage.setItem("user_id", userId);
-      localStorage.setItem("role", role);
-
-      // 🔥 REDIRECT
-      if (role === "doctor") {
-        router.push("/dashboard/doctor/slots");
-      } else {
-        router.push("/dashboard/patient");
-      }
+      router.push("/dashboard/patient");
     } catch (err) {
       console.error(err);
       alert("Server error");
@@ -85,102 +134,98 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-white">
-      <div className="w-[350px] space-y-6">
-        {/* Toggle */}
-        <div className="flex border rounded-lg overflow-hidden">
-          <button
-            onClick={() => setRole("patient")}
-            className={`w-1/2 py-2 ${role === "patient" ? "bg-black text-white" : ""}`}
-          >
-            Patient
-          </button>
-          <button
-            onClick={() => setRole("doctor")}
-            className={`w-1/2 py-2 ${role === "doctor" ? "bg-black text-white" : ""}`}
-          >
-            Doctor
-          </button>
-        </div>
-
+    <main className="min-h-screen flex items-center justify-center bg-white">
+      <div className="w-[350px] space-y-4">
         <h1 className="text-xl font-semibold text-center">
-          Register as {role}
+          Register as Patient
         </h1>
 
-        <div className="space-y-4">
-          {/* COMMON */}
+        {/* NAME */}
+        <div>
+          <label>Name</label>
           <input
-            type="text"
-            placeholder="Name"
             className="w-full border p-2 rounded"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+        </div>
 
-          {/* DOCTOR */}
-          {role === "doctor" && (
+        {/* PHONE */}
+        <div>
+          <label>Phone</label>
+          <input
+            className="w-full border p-2 rounded"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+        </div>
+
+        {/* ADDRESS */}
+        <div>
+          <label>Address</label>
+          <input
+            className="w-full border p-2 rounded"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+        </div>
+
+        {/* EMAIL */}
+        <div>
+          <label>Email</label>
+          <input
+            className="w-full border p-2 rounded"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        {/* INSURANCE */}
+        <div>
+          <label>Insurance</label>
+          <div className="flex gap-2">
             <select
-              className="w-full border p-2 rounded"
-              value={specialty}
-              onChange={(e) => setSpecialty(e.target.value as Specialty)}
+              className="border p-2 rounded"
+              value={insurancePrefix}
+              onChange={(e) => setInsurancePrefix(e.target.value)}
             >
-              {SPECIALTIES.map((s) => (
-                <option key={s}>{s}</option>
+              {INSURANCE_PREFIX.map((p) => (
+                <option key={p}>{p}</option>
               ))}
             </select>
-          )}
 
-          {/* PATIENT */}
-          {role === "patient" && (
-            <>
-              <input
-                type="text"
-                placeholder="Phone number"
-                className="w-full border p-2 rounded"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
+            <input
+              className="flex-1 border p-2 rounded"
+              placeholder="13 digits"
+              value={insuranceNumber}
+              onChange={(e) => setInsuranceNumber(e.target.value)}
+            />
+          </div>
+        </div>
 
-              <input
-                type="text"
-                placeholder="Address"
-                className="w-full border p-2 rounded"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
+        {/* DOB */}
+        <div>
+          <label>Date of Birth</label>
+          <input
+            type="date"
+            className="w-full border p-2 rounded"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+          />
+        </div>
 
-              <input
-                type="email"
-                placeholder="Email"
-                className="w-full border p-2 rounded"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-
-              <input
-                type="text"
-                placeholder="Insurance number"
-                className="w-full border p-2 rounded"
-                value={insurance}
-                onChange={(e) => setInsurance(e.target.value)}
-              />
-
-              <input
-                type="date"
-                className="w-full border p-2 rounded"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-              />
-
-              <input
-                type="text"
-                placeholder="Gender"
-                className="w-full border p-2 rounded"
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-              />
-            </>
-          )}
+        {/* GENDER */}
+        <div>
+          <label>Gender</label>
+          <select
+            className="w-full border p-2 rounded"
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+          >
+            <option value="">Select</option>
+            <option value="male">male</option>
+            <option value="female">female</option>
+          </select>
         </div>
 
         <button

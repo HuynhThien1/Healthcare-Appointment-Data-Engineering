@@ -22,6 +22,26 @@ def get_patient(patient_id: int):
         raise HTTPException(status_code=404, detail="Patient not found")
     return patient
 
+# ==============================
+# GET ALL INSURANCE NUMBERS
+# ==============================
+@router.get("/insurance-numbers/all")
+def get_insurance_numbers():
+    return get_all_insurance_numbers()
+
+
+@router.get("/by-insurance/{insurance}")
+def get_patient_by_insurance(insurance: str):
+    patient = fetch_one("""
+        SELECT patient_id
+        FROM patient
+        WHERE insurance_number = %s
+    """, (insurance,))
+
+    if not patient:
+        raise HTTPException(404, "Not found")
+
+    return patient
 
 # ==============================
 # CREATE

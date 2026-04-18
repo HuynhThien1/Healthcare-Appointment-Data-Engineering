@@ -18,7 +18,7 @@ def seed_appointment_transaction():
 
     rows = [
         (
-            clean(row["slotid"]),
+            clean(row["slotID"]),
             clean(row["patientID"]),
             clean(row["status"]).upper(),
             clean(row["event_timestamp"])

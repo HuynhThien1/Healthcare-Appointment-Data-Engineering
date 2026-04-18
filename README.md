@@ -73,7 +73,7 @@ docker compose exec postgres psql -U postgres -d postgres -c "\l"
 Test app connection to PostgreSQL:
 
 <pre>
-docker compose exec app python -c "from app.db import get_app_connection; conn=get_app_connection(); print('app db ok'); conn.close()"
+docker compose exec backend python -c "from app.db import get_app_connection; conn=get_app_connection(); print('app db ok'); conn.close()"
 </pre>
 
 h3. 2.3 Validate PostgreSQL schema and seed data
@@ -81,7 +81,7 @@ h3. 2.3 Validate PostgreSQL schema and seed data
 Create schema:
 
 <pre>
-docker compose exec app python -c "from app.create_schema import create_schema; create_schema()"
+docker compose exec backend python -c "from app.create_schema import create_schema; create_schema()"
 </pre>
 
 Check created tables:
@@ -93,13 +93,13 @@ docker compose exec postgres psql -U postgres -d healthcare_booking_realtime -c 
 Seed master data:
 
 <pre>
-docker compose exec app python -c "from app.seed_master_data import seed_all; seed_all()"
+docker compose exec backend python -c "from app.seed_master_data import seed_all; seed_all()"
 </pre>
 
 Check seeded data:
 
 <pre>
-docker compose exec app python -c "from app.db import fetch_all; print(fetch_all('SELECT * FROM doctor LIMIT 5;'))"
+docker compose exec backend python -c "from app.db import fetch_all; print(fetch_all('SELECT * FROM doctor LIMIT 5;'))"
 </pre>
 
 h3. 2.4 Validate Debezium connector
@@ -107,13 +107,13 @@ h3. 2.4 Validate Debezium connector
 Wait for Debezium service:
 
 <pre>
-docker compose exec app python -c "from app.register_connector import wait_for_debezium; wait_for_debezium()"
+docker compose exec backend python -c "from app.register_connector import wait_for_debezium; wait_for_debezium()"
 </pre>
 
 Register connector:
 
 <pre>
-docker compose exec app python -c "from app.register_connector import register_connector; register_connector()"
+docker compose exec backend python -c "from app.register_connector import register_connector; register_connector()"
 </pre>
 
 Check connector list:
@@ -157,7 +157,7 @@ h3. 2.6 Validate ClickHouse warehouse
 Initialize ClickHouse warehouse:
 
 <pre>
-docker compose exec app python -c "from app.init_clickhouse import init_clickhouse; init_clickhouse()"
+docker compose exec backend python -c "from app.init_clickhouse import init_clickhouse; init_clickhouse()"
 </pre>
 
 Check ClickHouse objects:
@@ -209,7 +209,7 @@ h3. 4.2 Update existing PostgreSQL data
 In another terminal:
 
 <pre>
-docker compose exec app python -c "from app.db import execute_query; execute_query(\"UPDATE doctor SET doctor_name='Nguyen Van B', updated_at=NOW() WHERE doctor_id=1001;\"); print('updated doctor')"
+docker compose exec backend python -c "from app.db import execute_query; execute_query(\"UPDATE doctor SET doctor_name='Nguyen Van B', updated_at=NOW() WHERE doctor_id=1001;\"); print('updated doctor')"
 </pre>
 
 Expected result:
@@ -221,7 +221,7 @@ h3. 4.3 Insert new PostgreSQL data
 In another terminal:
 
 <pre>
-docker compose exec app python -c "from app.db import execute_query; execute_query(\"INSERT INTO doctor (doctor_id, doctor_code, doctor_name, specialty, employment_status, created_at, updated_at) VALUES (2003, 'DOC2003', 'Le Van C', 'Neurology', 'ACTIVE', NOW(), NOW());\"); print('inserted doctor')"
+docker compose exec backend python -c "from app.db import execute_query; execute_query(\"INSERT INTO doctor (doctor_id, doctor_code, doctor_name, specialty, employment_status, created_at, updated_at) VALUES (2003, 'DOC2003', 'Le Van C', 'Neurology', 'ACTIVE', NOW(), NOW());\"); print('inserted doctor')"
 </pre>
 
 Expected result:

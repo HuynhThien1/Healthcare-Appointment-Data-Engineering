@@ -31,6 +31,17 @@ export default function PatientLayout({
           </button>
 
           <button
+            onClick={() => router.push("/dashboard/patient/medical-record")}
+            className={`px-4 py-2 rounded font-medium transition ${
+              pathname.includes("medical-record")
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Medical Record
+          </button>
+          
+          <button
             onClick={() => router.push("/dashboard/patient/history")}
             className={`btn ${
               pathname.includes("history") ? "btn-primary" : "btn-secondary"

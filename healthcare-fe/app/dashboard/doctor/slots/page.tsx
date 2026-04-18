@@ -7,9 +7,11 @@ type SlotStatus = "AVAILABLE" | "BOOKED" | "BLOCKED";
 
 type SlotResponse = {
   slot_code: string;
-  slot_status: SlotStatus | null;
+  slot_status: "AVAILABLE" | "BLOCKED" | "BOOKED" | null;
+  admin_status: "AVAILABLE" | "BLOCKED";
   patient_id?: number | null;
 };
+
 const getToday = () => {
   return new Date().toISOString().split("T")[0];
 };
@@ -17,18 +19,19 @@ const getToday = () => {
 export default function SlotPage() {
   const [date, setDate] = useState<string>(() => {
     if (typeof window === "undefined") return "";
-
     const saved = localStorage.getItem("doctor_slot_date");
-
     return saved ? saved : getToday();
   });
-  const [slots, setSlots] = useState<Record<string, SlotStatus>>({});
+
+  const [slots, setSlots] = useState<Record<string, SlotResponse>>({});
+
   const [userId, setUserId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("user_id");
     }
     return null;
   });
+
   const [patientMap, setPatientMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -36,7 +39,7 @@ export default function SlotPage() {
       localStorage.setItem("doctor_slot_date", date);
     }
   }, [date]);
-  // 📡 fetch slots
+
   useEffect(() => {
     if (!date || !userId) return;
 
@@ -53,13 +56,11 @@ export default function SlotPage() {
 
         const data: SlotResponse[] = await res.json();
 
-        const mapped: Record<string, SlotStatus> = {};
+        const mapped: Record<string, SlotResponse> = {};
         const patientTemp: Record<string, string> = {};
 
         for (const s of data) {
-          if (s.slot_status) {
-            mapped[s.slot_code] = s.slot_status;
-          }
+          mapped[s.slot_code] = s;
 
           if (s.slot_status === "BOOKED") {
             patientTemp[s.slot_code] = String(s.patient_id ?? "No patient");
@@ -67,7 +68,7 @@ export default function SlotPage() {
         }
 
         setSlots(mapped);
-        setPatientMap(patientTemp); // ✅ không reset riêng nữa
+        setPatientMap(patientTemp);
       } catch (err) {
         console.error(err);
       }
@@ -76,7 +77,6 @@ export default function SlotPage() {
     fetchSlots();
   }, [date, userId]);
 
-  // 📅 check past + today
   const isPastOrToday = (d: string) => {
     const today = new Date();
     const selected = new Date(d);
@@ -87,7 +87,6 @@ export default function SlotPage() {
     return selected <= today;
   };
 
-  // 🔄 update slot
   const handleUpdate = async (slot: string, value: SlotStatus) => {
     if (!date || !userId) return;
 
@@ -104,32 +103,15 @@ export default function SlotPage() {
 
       setSlots((prev) => ({
         ...prev,
-        [slot]: value,
+        [slot]: {
+          ...prev[slot],
+          slot_status: value,
+        },
       }));
     } catch (err) {
       console.error(err);
     }
   };
-
-  // 🔥 VIEW PATIENT
-  // const handleViewPatient = async (slot: string) => {
-  //   if (!userId || !date) return;
-
-  //   try {
-  //     const res = await fetch(
-  //       `http://127.0.0.1:8000/slots/doctor/${userId}/${date}/${slot}/patient`,
-  //     );
-
-  //     const data = await res.json();
-
-  //     setPatientMap((prev) => ({
-  //       ...prev,
-  //       [slot]: String(data?.patient_id ?? "No patient"),
-  //     }));
-  //   } catch (err) {
-  //     console.error(err);
-  //   }
-  // };
 
   return (
     <div className="space-y-6">
@@ -144,66 +126,131 @@ export default function SlotPage() {
 
       <div className="grid grid-cols-2 gap-4">
         {Object.entries(SLOT_MAP).map(([slot, time]) => {
-          const status = slots[slot];
+          const slotData = slots[slot];
+          const status: SlotStatus | null = slotData?.slot_status;
 
-          // ❌ NOT AVAILABLE
-          if (!status) {
+          // 1. Phân biệt Admin Block
+          const isAdminBlocked = slotData?.admin_status === "BLOCKED";
+
+          // Chưa được tạo trong database (Slot trống hoàn toàn)
+          if (!slotData || slotData.slot_status === null) {
             return (
-              <div key={slot} className="border p-3 bg-gray-100">
-                <div>{slot}</div>
-                <div>{time}</div>
-                <div className="text-red-500">NOT AVAILABLE</div>
+              <div
+                key={slot}
+                className="border p-3 bg-gray-50 flex flex-col gap-1"
+              >
+                <div className="font-bold">{slot}</div>
+                <div className="text-sm">{time}</div>
+                <div className="text-gray-400 text-sm">NOT AVAILABLE</div>
               </div>
             );
           }
 
-          // 🔥 BOOKED
-          if (status === "BOOKED") {
+          // ==========================================
+          // TRƯỜNG HỢP 1: BỊ ADMIN KHÓA (Do ngày lễ/nghỉ)
+          // ==========================================
+          if (isAdminBlocked) {
             return (
-              <div key={slot} className="border p-3 bg-yellow-50 space-y-2">
-                <div>{slot}</div>
-                <div>{time}</div>
-                <div className="text-red-500 font-bold">BOOKED</div>
-
-                {/* <button
-                  onClick={() => handleViewPatient(slot)}
-                  className="text-blue-600 underline"
-                >
-                  View Patient
-                </button> */}
-
-                {patientMap[slot] && <div>Patient: {patientMap[slot]}</div>}
+              <div
+                key={slot}
+                className="border p-3 bg-red-100 flex flex-col gap-1"
+              >
+                <div className="font-bold">{slot}</div>
+                <div className="text-sm">{time}</div>
+                <div className="text-red-600 font-bold text-sm flex items-center gap-1">
+                  🔒 BLOCKED BY ADMIN
+                </div>
+                <span className="text-xs text-red-500">
+                  Holiday / System Off
+                </span>
               </div>
             );
           }
 
-          // ⛔ PAST
+          // ==========================================
+          // TRƯỜNG HỢP 2: ĐÃ CÓ BỆNH NHÂN ĐẶT (BOOKED)
+          // ==========================================
+          if (slotData.slot_status === "BOOKED") {
+            return (
+              <div
+                key={slot}
+                className="border p-3 bg-yellow-100 flex flex-col gap-1"
+              >
+                <div className="font-bold">{slot}</div>
+                <div className="text-sm">{time}</div>
+                <div className="text-yellow-700 font-bold text-sm">
+                  ✅ BOOKED
+                </div>
+                {patientMap[slot] && (
+                  <div className="text-xs text-gray-700 font-medium">
+                    Patient ID: {patientMap[slot]}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // ==========================================
+          // TRƯỜNG HỢP 3: SLOT TRONG QUÁ KHỨ HOẶC HÔM NAY (Không cho sửa nữa)
+          // ==========================================
           if (isPastOrToday(date)) {
             return (
-              <div key={slot} className="border p-3 bg-gray-100">
-                <div>{slot}</div>
-                <div>{time}</div>
-                <div>{status}</div>
-                <div className="text-gray-500">LOCKED</div>
+              <div
+                key={slot}
+                className="border p-3 bg-gray-200 opacity-70 flex flex-col gap-1"
+              >
+                <div className="font-bold">{slot}</div>
+                <div className="text-sm">{time}</div>
+                <div className="text-gray-500 font-semibold text-sm">
+                  {status === "BLOCKED" ? "🛑 DOCTOR BLOCKED" : status}
+                </div>
+                <div className="text-xs text-gray-500 italic">
+                  Locked (Past/Today)
+                </div>
               </div>
             );
           }
 
-          // ✅ NORMAL
+          // ==========================================
+          // TRƯỜNG HỢP 4: AVAILABLE & NORMAL BLOCKED (Bác sĩ tự khóa)
+          // ==========================================
+          const currentStatus = status || "AVAILABLE";
+
+          const safeStatus: SlotStatus =
+            currentStatus === "AVAILABLE" || currentStatus === "BOOKED"
+              ? currentStatus
+              : "BLOCKED";
+
+          const bgColor =
+            safeStatus === "AVAILABLE"
+              ? "bg-green-50 border-green-200"
+              : "bg-gray-200 border-gray-300";
+
           return (
-            <div key={slot} className="border p-3">
-              <div>{slot}</div>
-              <div>{time}</div>
-              <div>{status}</div>
+            <div
+              key={slot}
+              className={`border p-3 flex flex-col gap-2 ${bgColor}`}
+            >
+              <div>
+                <div className="font-bold">{slot}</div>
+                <div className="text-sm">{time}</div>
+              </div>
+
+              {safeStatus === "BLOCKED" && (
+                <div className="text-xs text-gray-600 font-semibold">
+                  🛑 Blocked by you
+                </div>
+              )}
 
               <select
-                value={status}
+                className="border border-gray-300 p-1 rounded text-sm w-full outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                value={safeStatus}
                 onChange={(e) =>
                   handleUpdate(slot, e.target.value as SlotStatus)
                 }
               >
-                <option value="AVAILABLE">Available</option>
-                <option value="BLOCKED">Blocked</option>
+                <option value="AVAILABLE">✅ Available</option>
+                <option value="BLOCKED">🛑 Block (Manual)</option>
               </select>
             </div>
           );

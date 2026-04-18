@@ -18,7 +18,7 @@ def seed_patients():
         rows.append((
             row["patientName"],
             row["address"],
-            row["phoneNumber"],
+            str(row["phoneNumber"]).zfill(10),  # Đảm bảo phone_number là string (Adding 0 since csv don't support this format)
             row["insuranceNumber"],
             row["dateOfBirth"],
             row["gender"],

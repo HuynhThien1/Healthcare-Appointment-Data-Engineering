@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from app.services.patient_service import get_patient_by_id
 from app.services.doctor_service import get_doctor_by_id  # assuming you have this
+from app.services.admin_service import get_admin_by_code
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -42,4 +43,22 @@ def login_doctor(data: dict):
         "message": "Login successful",
         "role": "doctor",
         "user": doctor
+    }
+
+@router.post("/login/admin")
+def login_admin(data: dict):
+    admin_code = data.get("admin_code")
+
+    if not admin_code:
+        raise HTTPException(status_code=400, detail="admin_code is required")
+
+    admin = get_admin_by_code(admin_code)
+
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin not found")
+
+    return {
+        "message": "Login successful",
+        "role": "admin",
+        "user": admin
     }

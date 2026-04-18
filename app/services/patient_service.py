@@ -22,6 +22,19 @@ def get_patient_by_id(patient_id: int):
         WHERE patient_id = %s;
     """, (patient_id,))
 
+# ==============================
+# GET ALL INSURANCE NUMBERS
+# ==============================
+def get_all_insurance_numbers():
+    rows = fetch_all("""
+        SELECT insurance_number
+        FROM patient
+        WHERE insurance_number IS NOT NULL
+        ORDER BY insurance_number;
+    """)
+
+    # optional: return list thuần thay vì list dict
+    return rows
 
 # ==============================
 # CREATE

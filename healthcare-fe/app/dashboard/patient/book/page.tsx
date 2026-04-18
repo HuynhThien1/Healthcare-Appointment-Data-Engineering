@@ -2,74 +2,87 @@
 
 import { useEffect, useState } from "react";
 import { SLOT_MAP } from "@/app/constants/slots";
-type SlotStatus = "AVAILABLE" | "BOOKED" | "BLOCKED";
+
+type SlotStatus = "AVAILABLE" | "BOOKED" | "BLOCKED" | "NOT_AVAILABLE";
+
 const getToday = () => {
   return new Date().toISOString().split("T")[0];
 };
+
 export default function PatientBookingPage() {
   const [doctorId, setDoctorId] = useState<string | null>(null);
+  const [insurance, setInsurance] = useState<string | null>(null);
   const [patientId, setPatientId] = useState<string | null>(null);
+
   const [date, setDate] = useState<string>(() => {
     if (typeof window === "undefined") return "";
-
     const saved = localStorage.getItem("patient_selected_date");
-
     return saved ? saved : getToday();
   });
+
   const [slots, setSlots] = useState<Record<string, SlotStatus>>({});
   const [slotOwners, setSlotOwners] = useState<Record<string, string>>({});
   const [slotIds, setSlotIds] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  // =========================
-  // INIT USER DATA
-  // =========================
+
+  // KHOI TAO DU LIEU NGUOI DUNG
   useEffect(() => {
     setDoctorId(localStorage.getItem("selected_doctor_id"));
+    setInsurance(localStorage.getItem("user_insurance"));
     setPatientId(localStorage.getItem("user_id"));
   }, []);
 
-  // =========================
-  // MIN DATE (>= TODAY + 2)
-  // =========================
+  // LAY NGAY TOI THIEU (TODAY + 2)
   const getTwoDate = () => {
     const d = new Date();
     d.setDate(d.getDate() + 2);
-
     return d.toISOString().split("T")[0];
   };
+
   useEffect(() => {
     if (date) {
       localStorage.setItem("patient_selected_date", date);
     }
   }, [date]);
-  // =========================
-  // FETCH SLOTS
-  // =========================
+
+  // FETCH SLOTS TU API
   useEffect(() => {
     if (!doctorId || !date) return;
 
+    setSlots({});
+    setSlotOwners({});
+    setSlotIds({});
     const fetchSlots = async () => {
       try {
         setLoading(true);
-
         const res = await fetch(
-          `http://127.0.0.1:8000/slots/doctor/slots/${doctorId}/${date}`,
+          `http://127.0.0.1:8000/slots/doctor/slots/${doctorId}/${date}`
         );
-
         const data = await res.json();
+        if (!res.ok) {
+          setSlots({});
+          return;
+        }
 
         const mapped: Record<string, SlotStatus> = {};
         const ownerMap: Record<string, string> = {};
         const idMap: Record<string, string> = {};
 
         for (const s of data) {
-          mapped[s.slot_code] = s.slot_status;
-
-          if (s.slot_id) {
-            idMap[s.slot_code] = s.slot_id;
+          let status: SlotStatus;
+          if (s.slot_status === "AVAILABLE") {
+            status = "AVAILABLE";
+          } else if (s.slot_status === "BOOKED") {
+            status = "BOOKED";
+          } else if (s.slot_status === "BLOCKED") {
+            status = "BLOCKED";
+          } else {
+            status = "NOT_AVAILABLE";
           }
 
-          if (s.slot_status === "BOOKED") {
+          mapped[s.slot_code] = status;
+          if (s.slot_id) idMap[s.slot_code] = s.slot_id;
+          if (status === "BOOKED") {
             ownerMap[s.slot_code] = String(s.patient_id || "");
           }
         }
@@ -87,34 +100,31 @@ export default function PatientBookingPage() {
     fetchSlots();
   }, [doctorId, date]);
 
-  // =========================
-  // VALIDATE DATE
-  // =========================
-  const isPastOrToday = (d: string) => {
+  // KIEM TRA NGAY CO TRUOC (TODAY + 2) KHONG
+  const isBeforeTwoDays = (d: string) => {
     const today = new Date();
-    const selected = new Date(d);
-
     today.setHours(0, 0, 0, 0);
+
+    const minValidDate = new Date(today);
+    minValidDate.setDate(minValidDate.getDate() + 2);
+
+    const selected = new Date(d);
     selected.setHours(0, 0, 0, 0);
 
-    return selected <= today;
+    return selected < minValidDate;
   };
 
-  const isInvalidDate = date ? isPastOrToday(date) : true;
+  const isInvalidDate = date ? isBeforeTwoDays(date) : true;
 
-  // =========================
-  // BOOK SLOT
-  // =========================
+  // XU LY DAT LICH
   const handleBook = async (slot: string) => {
-    if (!doctorId || !patientId || !date) return;
-
+    if (!doctorId || !insurance || !date) return;
     if (isInvalidDate) {
-      alert("Invalid date");
+      alert("Invalid date: Booking must be at least 2 days in advance");
       return;
     }
 
     const slotId = slotIds[slot];
-
     if (!slotId) {
       alert("Slot not found");
       return;
@@ -123,9 +133,7 @@ export default function PatientBookingPage() {
     try {
       const res = await fetch("http://127.0.0.1:8000/appointments", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slot_id: slotId,
           patient_id: Number(patientId),
@@ -138,40 +146,33 @@ export default function PatientBookingPage() {
       }
 
       const result = await res.json();
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
 
       alert(`Booked successfully!\nTransaction: ${result.booking_ref}`);
-
-      // update UI ngay lập tức
       setSlots((prev) => ({ ...prev, [slot]: "BOOKED" }));
-      setSlotOwners((prev) => ({ ...prev, [slot]: patientId! }));
+      setSlotOwners((prev) => ({ ...prev, [slot]: String(patientId) }));
     } catch (err) {
       console.error(err);
       alert("Server error");
     }
   };
 
-  // =========================
-  // CANCEL SLOT
-  // =========================
+  // XU LY HUY LICH
   const handleCancel = async (slot: string) => {
-    if (!doctorId || !patientId || !date) return;
-
+    if (!doctorId || !insurance || !date) return;
     const slotId = slotIds[slot];
-
-    if (!slotId) {
-      alert("Slot not found");
-      return;
-    }
+    if (!slotId) return;
 
     try {
       const res = await fetch("http://127.0.0.1:8000/appointments/cancel", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slot_id: slotId,
-          patient_id: Number(patientId),
+          insurance_number: insurance,
         }),
       });
 
@@ -181,28 +182,23 @@ export default function PatientBookingPage() {
       }
 
       alert("Cancelled");
-
       setSlots((prev) => ({ ...prev, [slot]: "AVAILABLE" }));
       setSlotOwners((prev) => {
-        const copy = { ...prev };
-        delete copy[slot];
-        return copy;
+        const newOwners = { ...prev };
+        delete newOwners[slot];
+        return newOwners;
       });
     } catch (err) {
       console.error(err);
-      alert("Server error");
     }
   };
 
   if (!doctorId) return <div>Loading doctor...</div>;
 
-  // =========================
-  // UI
-  // =========================
   return (
-    
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <h1 className="text-xl font-semibold">Booking Doctor ID: {doctorId}</h1>
+      <div className="text-sm text-gray-500">Insurance: {insurance}</div>
 
       <input
         type="date"
@@ -218,65 +214,85 @@ export default function PatientBookingPage() {
         {Object.entries(SLOT_MAP).map(([slot, time]) => {
           const status = slots[slot];
 
+          // TRUONG HOP 1: SLOT CHUA DUOC TAO
           if (!status) {
             return (
               <div key={slot} className="border p-3 bg-gray-100 rounded">
-                <div>{slot}</div>
-                <div>{time}</div>
-                <div className="text-red-500">NOT AVAILABLE</div>
+                <div className="font-bold">{slot}</div>
+                <div className="text-sm">{time}</div>
+                <div className="text-red-500 text-sm mt-1">NOT AVAILABLE</div>
               </div>
             );
           }
 
+          // TRUONG HOP 2: SLOT DA DUOC DAT
           if (status === "BOOKED") {
-            const isMine = slotOwners[slot] === patientId;
-
-            if (isMine) {
-              return (
-                <div key={slot} className="border p-3 bg-pink-50 rounded">
-                  <div>{slot}</div>
-                  <div>{time}</div>
-                  <div className="text-pink-600 font-bold">YOUR BOOKING</div>
-
+            const isMySlot = slotOwners[slot] === patientId;
+            return (
+              <div
+                key={slot}
+                className={`border p-3 rounded ${isMySlot ? "bg-pink-100" : "bg-yellow-50"}`}
+              >
+                <div className="font-bold">{slot}</div>
+                <div className="text-sm">{time}</div>
+                <div className={`font-bold mt-1 ${isMySlot ? "text-pink-600" : "text-red-500"}`}>
+                  BOOKED
+                </div>
+                {isMySlot && (
                   <button
                     onClick={() => handleCancel(slot)}
-                    className="mt-2 bg-pink-500 text-white px-2 py-1 rounded"
+                    className="mt-2 bg-red-500 text-white px-2 py-1 rounded text-xs"
                   >
                     Cancel
                   </button>
-                </div>
-              );
-            }
-
-            return (
-              <div key={slot} className="border p-3 bg-yellow-50 rounded">
-                <div>{slot}</div>
-                <div>{time}</div>
-                <div className="text-red-500 font-bold">BOOKED</div>
+                )}
               </div>
             );
           }
 
+          // TRUONG HOP 3: SLOT BI ADMIN HOAC BAC SI KHOA
           if (status === "BLOCKED") {
             return (
-              <div key={slot} className="border p-3 bg-gray-200 rounded">
-                <div>{slot}</div>
-                <div>{time}</div>
-                <div className="text-gray-500">BLOCKED</div>
+              <div key={slot} className="border p-3 bg-gray-300 rounded">
+                <div className="font-bold">{slot}</div>
+                <div className="text-sm">{time}</div>
+                <div className="text-red-600 font-bold mt-1">BLOCKED</div>
               </div>
             );
           }
 
+          // TRUONG HOP 4: SLOT KHONG KHA DUNG
+          if (status === "NOT_AVAILABLE") {
+            return (
+              <div key={slot} className="border p-3 bg-gray-200 rounded">
+                <div className="font-bold">{slot}</div>
+                <div className="text-sm">{time}</div>
+                <div className="text-gray-500 mt-1">NOT AVAILABLE</div>
+              </div>
+            );
+          }
+
+          // TRUONG HOP 5: SLOT TRONG NHUNG NGAY CHON < TODAY + 2 (HIEN QUA KHU)
+          if (isInvalidDate) {
+            return (
+              <div key={slot} className="border p-3 bg-gray-200 rounded opacity-70">
+                <div className="font-bold">{slot}</div>
+                <div className="text-sm">{time}</div>
+                <div className="text-gray-500 font-bold mt-1">PAST</div>
+                <div className="text-xs text-gray-500 italic">Expired</div>
+              </div>
+            );
+          }
+
+          // TRUONG HOP 6: AVAILABLE VA CO THE DAT
           return (
             <div key={slot} className="border p-3 bg-green-50 rounded">
-              <div>{slot}</div>
-              <div>{time}</div>
-              <div className="text-green-600 font-bold">AVAILABLE</div>
-
+              <div className="font-bold">{slot}</div>
+              <div className="text-sm">{time}</div>
+              <div className="text-green-600 font-bold mt-1">AVAILABLE</div>
               <button
-                disabled={isInvalidDate}
                 onClick={() => handleBook(slot)}
-                className="mt-2 bg-blue-500 text-white px-2 py-1 rounded"
+                className="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
               >
                 Book
               </button>
