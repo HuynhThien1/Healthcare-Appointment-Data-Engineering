@@ -95,6 +95,23 @@ medical_record_after_schema = StructType(
     ]
 )
 
+
+# Output schema for notification event after Spark transformation
+#This event is different from other one because this is created in spark 
+notification_event_schema = StructType(
+    [
+        StructField("notification_key", StringType(), True),
+        StructField("transaction_id", StringType(), True),
+        StructField("slot_id", StringType(), True),
+        StructField("patient_id", LongType(), True),
+        StructField("action", StringType(), True),  #BOOOKED or CANCELED
+        StructField("event_type", StringType(), True), # BOOKING_CONFIRMATION / BOOKING_CANCELLATION
+        StructField("event_time", StringType(), True),
+        StructField("channel", StringType(), True) # EMAIL
+    ]
+)
+
+
 debezium_slot_code_template_schema = debezium_envelope(slot_code_template_after_schema)
 debezium_doctor_schema = debezium_envelope(doctor_after_schema)
 debezium_patient_schema = debezium_envelope(patient_after_schema)

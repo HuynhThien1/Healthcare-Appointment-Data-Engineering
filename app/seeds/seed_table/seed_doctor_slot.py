@@ -15,7 +15,8 @@ def seed_doctor_slots():
         row["doctorID"],
         row["date"],
         row["slotCode"],
-        "AVAILABLE"
+        "AVAILABLE",
+        "AVAILABLE"  # admin_status mặc định là 'AVAILABLE'
     )
     for _, row in df.iterrows()
     ]
@@ -31,7 +32,8 @@ def seed_doctor_slots():
                     doctor_id,
                     slot_date,
                     slot_code,
-                    slot_status
+                    slot_status,
+                    admin_status
                 )
                 VALUES %s
                 ON CONFLICT DO NOTHING;

@@ -1,26 +1,33 @@
 from app.db import fetch_all, fetch_one, execute_query, get_app_connection
+from datetime import datetime
 
 
 # ==============================
 # GET ALL
 # ==============================
 def get_all_appointments():
-    return fetch_all("""
+    return fetch_all(
+        """
         SELECT *
         FROM appointment
         ORDER BY appointment_id;
-    """)
+    """
+    )
 
 
 # ==============================
 # GET BY ID
 # ==============================
 def get_appointment_by_id(appointment_id: int):
-    return fetch_one("""
+    return fetch_one(
+        """
         SELECT *
         FROM appointment
         WHERE appointment_id = %s;
-    """, (appointment_id,))
+    """,
+        (appointment_id,),
+    )
+
 
 def get_patient_appointments(patient_id: int):
     query = """
@@ -39,6 +46,7 @@ def get_patient_appointments(patient_id: int):
 
     return fetch_all(query, (patient_id,))
 
+
 # ==============================
 # CREATE (BOOK SLOT)
 # ==============================
@@ -48,23 +56,49 @@ def create_appointment(data: dict):
     try:
         with conn.cursor() as cur:
 
-            # 🔒 lock slot
-            cur.execute("""
-                SELECT slot_id
+            # =========================
+            # 0. VALIDATE INPUT
+            # =========================
+            slot_id = data.get("slot_id")
+            patient_id = data.get("patient_id")
+
+            if not slot_id or not patient_id:
+                raise Exception("Missing slot_id or patient_id")
+
+            # =========================
+            # 1. LOCK SLOT + CHECK STATUS
+            # =========================
+            cur.execute(
+                """
+                SELECT slot_status, admin_status
                 FROM doctor_slot
                 WHERE slot_id = %s
-AND NOT EXISTS (
-    SELECT 1 FROM appointment a
-    WHERE a.slot_id = doctor_slot.slot_id
-)
-FOR UPDATE;
-            """, (data["slot_id"],))
+                FOR UPDATE;
+            """,
+                (slot_id,),
+            )
 
-            if not cur.fetchone():
+            row = cur.fetchone()
+
+            if not row:
+                raise Exception("Slot not found")
+
+            slot_status, admin_status = row
+
+            if admin_status == "BLOCKED":
+                raise Exception("Slot blocked by admin")
+
+            if slot_status == "BLOCKED":
+                raise Exception("That slot is blocked")
+
+            if slot_status == "BOOKED":
                 raise Exception("Slot already booked")
 
-            # 🔥 insert transaction trước
-            cur.execute("""
+            # =========================
+            # 2. INSERT TRANSACTION
+            # =========================
+            cur.execute(
+                """
                 INSERT INTO appointment_transaction (
                     slot_id,
                     patient_id,
@@ -73,15 +107,17 @@ FOR UPDATE;
                 )
                 VALUES (%s, %s, 'BOOKED', NOW())
                 RETURNING transaction_id;
-            """, (
-                data["slot_id"],
-                data["patient_id"]
-            ))
+            """,
+                (slot_id, patient_id),
+            )
 
             txn_id = cur.fetchone()[0]
 
-            # 🔥 insert appointment (booking_ref = txn_id)
-            cur.execute("""
+            # =========================
+            # 3. INSERT APPOINTMENT
+            # =========================
+            cur.execute(
+                """
                 INSERT INTO appointment (
                     booking_ref,
                     slot_id,
@@ -90,61 +126,79 @@ FOR UPDATE;
                 )
                 VALUES (%s, %s, %s, NOW())
                 RETURNING appointment_id;
-            """, (
-                txn_id,
-                data["slot_id"],
-                data["patient_id"]
-            ))
+            """,
+                (txn_id, slot_id, patient_id),
+            )
 
             appointment_id = cur.fetchone()[0]
 
-            # 🔥 update slot
-            cur.execute("""
+            # =========================
+            # 4. UPDATE SLOT STATUS
+            # =========================
+            cur.execute(
+                """
                 UPDATE doctor_slot
                 SET slot_status = 'BOOKED'
                 WHERE slot_id = %s;
-            """, (data["slot_id"],))
+            """,
+                (slot_id,),
+            )
 
         conn.commit()
 
         return {
+            "success": True,
             "appointment_id": appointment_id,
-            "booking_ref": txn_id
+            "booking_ref": txn_id,
+            "message": "Booked successfully",
         }
 
     except Exception as e:
         conn.rollback()
-        raise e
+
+        # =========================
+        # RETURN CLEAN ERROR
+        # =========================
+        return {"success": False, "message": str(e)}
 
     finally:
         conn.close()
+
 
 # ==============================
 # DELETE (ADMIN ONLY)
 # ==============================
 def delete_appointment(appointment_id: int):
-    execute_query("""
+    execute_query(
+        """
         DELETE FROM appointment
         WHERE appointment_id = %s;
-    """, (appointment_id,))
+    """,
+        (appointment_id,),
+    )
 
 
 # ==============================
 # CANCEL (PATIENT)
 # ==============================
-def cancel_appointment(slot_id: str, patient_id: int):
+def cancel_appointment(slot_id: str, insurance_number: str):
     conn = get_app_connection()
 
     try:
         with conn.cursor() as cur:
 
-            # 🔒 check ownership
-            cur.execute("""
-                SELECT appointment_id
-                FROM appointment
-                WHERE slot_id = %s
-                AND patient_id = %s;
-            """, (slot_id, patient_id))
+            # 1. CHECK OWNERSHIP (insurance → patient → appointment)
+            cur.execute(
+                """
+                SELECT a.appointment_id, a.patient_id
+                FROM appointment a
+                JOIN patient p 
+                    ON a.patient_id = p.patient_id
+                WHERE a.slot_id = %s
+                AND p.insurance_number = %s;
+            """,
+                (slot_id, insurance_number),
+            )
 
             appt = cur.fetchone()
 
@@ -152,15 +206,11 @@ def cancel_appointment(slot_id: str, patient_id: int):
                 raise Exception("Not your booking")
 
             appointment_id = appt[0]
+            patient_id = appt[1]
 
-            # 🔥 delete appointment
-            cur.execute("""
-                DELETE FROM appointment
-                WHERE appointment_id = %s;
-            """, (appointment_id,))
-
-            # 🔥 insert transaction CANCELLED
-            cur.execute("""
+            # 2. LOG TRANSACTION
+            cur.execute(
+                """
                 INSERT INTO appointment_transaction (
                     slot_id,
                     patient_id,
@@ -169,26 +219,34 @@ def cancel_appointment(slot_id: str, patient_id: int):
                 )
                 VALUES (%s, %s, 'CANCELLED', NOW())
                 RETURNING transaction_id;
-            """, (
-                slot_id,
-                patient_id
-            ))
+            """,
+                (slot_id, patient_id),
+            )
 
             cancel_txn = cur.fetchone()[0]
 
-            # 🔥 update slot
-            cur.execute("""
+            # 3. DELETE APPOINTMENT
+            cur.execute(
+                """
+                DELETE FROM appointment
+                WHERE appointment_id = %s;
+            """,
+                (appointment_id,),
+            )
+
+            # 4. UPDATE SLOT
+            cur.execute(
+                """
                 UPDATE doctor_slot
                 SET slot_status = 'AVAILABLE'
                 WHERE slot_id = %s;
-            """, (slot_id,))
+            """,
+                (slot_id,),
+            )
 
         conn.commit()
 
-        return {
-            "message": "Cancelled",
-            "cancel_transaction": cancel_txn
-        }
+        return {"message": "Cancelled", "cancel_transaction": cancel_txn}
 
     except Exception as e:
         conn.rollback()
@@ -196,7 +254,8 @@ def cancel_appointment(slot_id: str, patient_id: int):
 
     finally:
         conn.close()
-        
+
+
 def get_doctor_appointments(doctor_id: str):
     query = """
         SELECT 

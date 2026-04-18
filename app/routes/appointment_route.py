@@ -45,7 +45,7 @@ def create(data: dict):
 def cancel(data: dict):
     return cancel_appointment(
         data["slot_id"],   # str
-        data["patient_id"] # int
+        data["insurance_number"] # str
     )
 
 

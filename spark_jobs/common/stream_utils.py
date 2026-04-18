@@ -55,3 +55,5 @@ def build_cdc_dataframe(raw_df, debezium_schema, columns):
     ])
 
     return parsed_df.select(*select_exprs)
+
+

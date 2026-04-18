@@ -56,3 +56,21 @@ APP_DB_CONFIG = {
     "user": PG_USER,
     "password": PG_PASSWORD
 }
+
+# explanation: Kafka topic for notification business event
+TOPIC_NOTIFICATION_BOOKING_EVENT = os.getenv(
+    "TOPIC_NOTIFICATION_BOOKING_EVENT",
+    "notification.booking_event"
+)
+
+# Notification topic
+TOPIC_NOTIFICATION_BOOKING_EVENT = os.getenv(
+    "TOPIC_NOTIFICATION_BOOKING_EVENT",
+    "notification.booking_event"
+)
+# explanation: SMTP config for email notification
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASS = os.getenv("SMTP_PASS", "")
+SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
