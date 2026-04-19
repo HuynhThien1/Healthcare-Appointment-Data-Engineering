@@ -24,11 +24,9 @@ This project demonstrates a real-time data engineering pipeline for a healthcare
 
 ## GIỚI THIỆU MÔN HỌC
 
--   **Tên môn học:** Truy vấn thông tin đa phương tiện
--   **Mã môn học:** CS336
--   **Mã lớp:** CS336.O12.KHCL
--   **Năm học:** HK2 (2023 - 2024)
--   **Giảng viên**: TS.Đỗ Văn Tiến
+-   **Tên môn học:** Data Engineering 
+-   **Mã môn học:** Data Engineering (CO3059)
+-   **Giảng viên**:  Phan Trong Nhan
 
 ## 1. Run the project
 
