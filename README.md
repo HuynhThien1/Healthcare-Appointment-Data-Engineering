@@ -5,7 +5,11 @@ This project demonstrates a real-time data engineering pipeline for a healthcare
 <!-- Banner -->
 <p align="center">
   <a href="https://hcmut.edu.vn/" title="Trường Đại học Bách khoa - ĐHQG-HCM" style="border: none;">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/HCMCUT.svg/500px-HCMCUT.svg.png" alt="Trường Đại học Bách khoa - ĐHQG-HCM | Ho Chi Minh City University of Technology">
+    <img
+      src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/HCMCUT.svg/500px-HCMCUT.svg.png"
+      alt="Trường Đại học Bách khoa - ĐHQG-HCM | Ho Chi Minh City University of Technology"
+      width="220"
+    />
   </a>
 </p>
 <h1 align="center"><b>Data Engineering</b></h>
