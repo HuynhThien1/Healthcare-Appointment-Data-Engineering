@@ -12,8 +12,6 @@ This project demonstrates a real-time data engineering pipeline for a healthcare
     />
   </a>
 </p>
-<h1 align="center"><b>Data Engineering</b></h>
-
 ## THÀNH VIÊN NHÓM
 
 | STT |   MSSV   |       Họ và Tên                       | 
