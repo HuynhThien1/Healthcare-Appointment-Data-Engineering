@@ -12,10 +12,11 @@ This project demonstrates a real-time data engineering pipeline for a healthcare
     />
   </a>
 </p>
+
 ## THÀNH VIÊN NHÓM
 
-| STT |   MSSV   |       Họ và Tên                       | 
-| --- | :------: | --------------:| 
+| STT |   MSSV                          |       Họ và Tên                                            | 
+| --- | :------:                          | --------------:                                            | 
 | 1   | 2570760 |  Huỳnh Công Thiện                 | 
 | 2   | 2570804 | Dương Hoàng Yến            | 
 | 3   | 2570771 | Lê Đức Nghĩa            | 
